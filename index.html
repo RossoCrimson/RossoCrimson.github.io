@@ -144,8 +144,10 @@
     <!-- Время выступления -->
     <div class="card form-card p-4">
       <h5 class="card-title mb-3">Выбор времени выступления</h5>
-      <p>Занятые слоты заблокированы.</p>
-      <div class="row" id="timeSlots"></div>
+      <p class="text-muted">Занятые слоты заблокированы. Доступны слоты на ближайшие 7 дней.</p>
+      <div class="row" id="timeSlots">
+        <div class="col-12 text-center text-muted">Загрузка доступных слотов...</div>
+      </div>
     </div>
 
     <button type="submit" class="btn btn-submit w-100 mt-4">Отправить заявку</button>
@@ -163,24 +165,41 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'getSlots' })
       });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при получении слотов');
+      }
+
       const slots = await response.json();
       const container = document.getElementById("timeSlots");
       container.innerHTML = '';
+
+      if (slots.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-danger">Нет доступных слотов на ближайшую неделю</div>';
+        return;
+      }
+
       slots.forEach(slot => {
         const div = document.createElement("div");
-        div.className = "col-md-3 mb-2 time-slot";
+        div.className = "col-md-3 mb-3 time-slot";
+
         div.innerHTML = `
-          <div class="form-check">
+          <div class="form-check h-100">
             <input class="form-check-input" type="radio" name="timeSlot" value="${slot.time}" ${slot.isBusy ? 'disabled' : ''}>
-            <label class="form-check-label w-100 text-center p-2 border rounded ${slot.isBusy ? 'busy' : ''}">
+            <label class="form-check-label w-100 p-2 border rounded text-center ${
+              slot.isBusy ? 'bg-light text-muted' : ''
+            }">
               ${slot.formatted}
             </label>
           </div>
         `;
+
         container.appendChild(div);
       });
     } catch (error) {
-      console.error('Ошибка загрузки слотов:', error);
+      console.error('Ошибка:', error);
+      document.getElementById("timeSlots").innerHTML = `
+        <div class="col-12 text-center text-danger">Не удалось загрузить слоты. Попробуйте позже.</div>`;
     }
   }
 
@@ -225,7 +244,9 @@
     });
   });
 
-  fetchSlots(); // загрузка слотов при загрузке страницы
+  window.addEventListener('DOMContentLoaded', () => {
+    fetchSlots();
+  });
 </script>
 
 </body>
